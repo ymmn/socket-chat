@@ -21,16 +21,38 @@ var numUsers = 0;
 // command types enum
 var COIN_FLIP = -19292;
 var NORMAL_TEXT = -2343;
+var OBNOXIOUS = -23343;
+var MISSPELL = -24443;
+
+var misspellSentence = function(sentence) {
+  var MISSPELL_AGGRESSIVENESS = 0.4; // higher is more aggressive
+  return sentence.split(/\W+/).map(function(word) {
+    var len = word.length;
+    if (len < 2) {
+      return word;
+    }
+
+    // shuffle the middle of the word
+    var mid = word.substr(1, len - 2);
+    mid = mid.split('').sort(function(){return MISSPELL_AGGRESSIVENESS-Math.random();}).join('');
+
+    return word[0] + mid + word[len -1];
+  }).join(' ');
+};
 
 var getCommandType = function (msg) {
   if (msg === '/flipcoin') {
     return COIN_FLIP;
+  } else if (msg === '/obnoxious') {
+    return OBNOXIOUS;
+  } else if (msg === '/misspell') {
+    return MISSPELL;
   } else {
     return NORMAL_TEXT;
   }
 };
 
-var doCoinFlip = function (username) {
+var doCoinFlip = function () {
   var flipResult = 'Heads';
   if (Math.random() < 0.5) {
     flipResult = 'Tails';
@@ -38,7 +60,28 @@ var doCoinFlip = function (username) {
   return 'flips coin: gets ' + flipResult + '!';
 };
 
-var interpretCommand = function (username, msg) {
+var toggleObnoxiousMode = function (socket) {
+  socket.obnoxiousMode = !socket.obnoxiousMode;
+  return 'toggles /obnoxious mode';
+};
+
+var toggleMisspellMode = function (socket) {
+  socket.misspellMode = !socket.misspellMode;
+  return 'toggles /misspell mode';
+};
+
+var getText = function(socket, msg) {
+  if (socket.obnoxiousMode) {
+    msg = msg + ', ay?';
+  }
+  if (socket.misspellMode) {
+    msg = misspellSentence(msg);
+  }
+  return msg;
+};
+
+var interpretCommand = function (socket, msg) {
+  var username = socket.username;
   var commandType = getCommandType(msg);
   var output = {
     username: 'System',
@@ -46,12 +89,16 @@ var interpretCommand = function (username, msg) {
   };
 
   if (commandType === COIN_FLIP) {
-    output.message += doCoinFlip(username);
+    output.message += doCoinFlip();
+  } else if (commandType === OBNOXIOUS) {
+    output.message += toggleObnoxiousMode(socket);
+  } else if (commandType === MISSPELL) {
+    output.message += toggleMisspellMode(socket);
   } else {
     // must be regular text
     output = {
       username: username,
-      message: msg
+      message: getText(socket, msg)
     };
   }
 
@@ -64,8 +111,7 @@ io.on('connection', function (socket) {
   // when the client emits 'new message', this listens and executes
   socket.on('new message', function (data) {
     // we tell the client to execute 'new message'
-    var commandOutput = interpretCommand(socket.username, data);
-
+    var commandOutput = interpretCommand(socket, data);
     socket.broadcast.emit('new message', commandOutput);
     // emit to original user as well
     socket.emit('new message', commandOutput);
