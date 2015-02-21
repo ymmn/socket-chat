@@ -18,16 +18,57 @@ app.use(express.static(__dirname + '/public'));
 var usernames = {};
 var numUsers = 0;
 
+// command types enum
+var COIN_FLIP = -19292;
+var NORMAL_TEXT = -2343;
+
+var getCommandType = function (msg) {
+  if (msg === '/flipcoin') {
+    return COIN_FLIP;
+  } else {
+    return NORMAL_TEXT;
+  }
+};
+
+var doCoinFlip = function (username) {
+  var flipResult = 'Heads';
+  if (Math.random() < 0.5) {
+    flipResult = 'Tails';
+  }
+  return 'flips coin: gets ' + flipResult + '!';
+};
+
+var interpretCommand = function (username, msg) {
+  var commandType = getCommandType(msg);
+  var output = {
+    username: 'System',
+    message: 'User @' + username + ' ' // to be completed by command
+  };
+
+  if (commandType === COIN_FLIP) {
+    output.message += doCoinFlip(username);
+  } else {
+    // must be regular text
+    output = {
+      username: username,
+      message: msg
+    };
+  }
+
+  return output;
+};
+
 io.on('connection', function (socket) {
   var addedUser = false;
 
   // when the client emits 'new message', this listens and executes
   socket.on('new message', function (data) {
     // we tell the client to execute 'new message'
-    socket.broadcast.emit('new message', {
-      username: socket.username,
-      message: data
-    });
+    var commandOutput = interpretCommand(socket.username, data);
+
+    socket.broadcast.emit('new message', commandOutput);
+    // emit to original user as well
+    socket.emit('new message', commandOutput);
   });
 
   // when the client emits 'add user', this listens and executes
