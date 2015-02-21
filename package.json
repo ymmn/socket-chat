@@ -7,6 +7,13 @@
   "private": true,
   "license": "BSD",
   "dependencies": {
-    "express": "3.4.8"
+    "express": "3.4.8",
+    "engine.io": "automattic/engine.io#ddc64a",
+    "socket.io-parser": "2.2.3",
+    "socket.io-client": "automattic/socket.io-client#210d65",
+    "socket.io-adapter": "automattic/socket.io-adapter#ae79d8",
+    "socket.io": "*",
+    "has-binary": "0.1.6",
+    "debug": "2.1.0"
   }
 }
